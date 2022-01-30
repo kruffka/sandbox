@@ -1,0 +1,34 @@
+@startuml
+!theme plain
+skinparam defaultFontName PragmataPro Mono Liga
+
+
+:SIB1
+rnti ffff,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 0,payloadSize 39,payload 1800180000;
+
+:RAR (msg2)
+rnti 10b,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 0,payloadSize 39,payload 1501000000;
+
+:RRC SETUP (msg4)
+rnti 2fd6,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 0,payloadSize 39,payload 5800000005;
+
+:UE RNTI = 2fd6;
+
+:rnti 2fd6,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 4,payloadSize 39,payload 600120000;
+
+:rnti 2fd6,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 4,payloadSize 39,payload 40d8920401)
+(175.13) Received dci indication (rnti 2fd6,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 4,payloadSize 39,payload 40d8928483)
+(176.3) Received dci indication (rnti 2fd6,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 0,payloadSize 39,payload 40d8924483)
+(176.13) Received dci indication (rnti 2fd6,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 4,payloadSize 39,payload 40d892c483)
+(179.13) Received dci indication (rnti 2fd6,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 4,payloadSize 39,payload 660120400)
+
+[MAC]   [L2][MAC] decode mib
+(229.13) Received dci indication (rnti 2fd6,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 4,payloadSize 39,payload 660122c00)
+[MAC]   [L2][MAC] decode mib
+[MAC]   [L2][MAC] decode mib
+(232.1) Received dci indication (rnti 2fd6,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 0,payloadSize 39,payload 40d8921c05)
+[PHY]   In ue_ta_procedures: [UE 0] [232.7] Got timing advance command 31 from MAC, new value is 0
+[MAC]   [L2][MAC] decode mib
+(234.13) Received dci indication (rnti 2fd6,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 4,payloadSize 39,payload 600123000);
+
+@enduml

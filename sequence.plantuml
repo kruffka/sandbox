@@ -1,0 +1,52 @@
+@startuml
+!theme plain
+skinparam defaultFontName PragmataPro Mono Liga
+
+
+:Received **NR_RRCSetup** (msg4 от базы) Logical Channel DL-CCCH (SRB0)
+    
+    T300 timer
+
+    Обработка и применение mac_CellGroupConfig
+    1)nr_rrc_ue_process_masterCellGroup(обрабатывает и передает на mac. 
+    тут была последняя ошибка с несуществующим commonControlResourceSet'ом, 
+    который заменен сейчас на лист, в котором есть такой сет)
+    2)nr_rrc_ue_process_radioBearerConfig()
+    3)nr_rrc_set_state(NR_RRC_CONNECTED)
+    4)nr_rrc_set_sub_state()
+    ;
+
+:
+UICC simulation IMSI, KI, OPc from conf (openairinterface5g/doc/5GNAS.md)
+rrc_ue_generate_RRCSetupComplete(генерим на SRB1 to gNB_index 0) - msg5;
+
+:trigger_periodic_scheduling_request() - мимо O_SR = 0;
+
+:nr_get_csi_measurements() - O_CSI = 0;
+
+:get_downlink_ack() - много математики O_ACK = 1;
+
+:N_UCI = O_SR + O_ACK + O_CSI > 0
+
+NR_MAC configure_pucch, O_SR 0, O_ACK 1, O_CSI 0;
+
+:Генерим pucch ack, база начинает что-то в ответ новое отправлять;
+
+:schedulingrequest is active in frame slot
+Couldn't find resource for SR (тут искало от 0 до 5 ресурсы в 
+resourceSetToAddModList добавил чтобы искало resource в 
+resourceToAddModList, ищет с 0 по 6 теперь если в settoadd не нашел.
+Находит schedulingrequestresourceconfig.resource = 6 == 6 resourceToAddModList);
+
+:Ничего не происходит больше с nrUE, спамит schedulingrequest is 
+active in frame slot (O_SR 1, O_ACK 0, O_CSI 0)
+и останавливается на условии do not transmit pucch
+if only SR scheduled and it is negative, т.е. O_SR 1 и sr_payload = 0 
+(0 - negative, 1 - positive)
+в trigger_periodic_scheduling_request() проверяется нужно ли 
+сейчас SR и если да, то после он всегда становится негативным.
+Не хочет быть позитивным;
+
+:Если сделать его насильно позитивным или убрать условие - ломается;
+
+@enduml

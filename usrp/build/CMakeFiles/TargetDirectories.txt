@@ -1,0 +1,3 @@
+/home/usrpuser/test/usrp/build/CMakeFiles/rebuild_cache.dir
+/home/usrpuser/test/usrp/build/CMakeFiles/usrp_lib.dir
+/home/usrpuser/test/usrp/build/CMakeFiles/edit_cache.dir

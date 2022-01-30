@@ -1,0 +1,19 @@
+@startuml
+!theme plain
+skinparam defaultFontName PragmataPro Mono Liga
+
+
+:SIB1
+rnti ffff,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 0,payloadSize 37,payload 2f0040000;
+
+:RAR (msg2)
+rnti f,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 0,payloadSize 37,payload 300040000;
+
+:RRC SETUP (msg4)
+rnti 46,dci format NR_DL_DCI_FORMAT_1_0,n_CCE 0,payloadSize 37,payload 17800d0044;
+
+:UE RNTI = 46 or 47;
+
+:dci format 1_0?? mcs_idx = 9??;
+
+@enduml

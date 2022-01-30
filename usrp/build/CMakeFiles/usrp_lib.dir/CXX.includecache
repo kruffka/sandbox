@@ -1,0 +1,34 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/usrpuser/test/usrp/usrp_lib.cpp
+uhd/types/tune_request.hpp
+-
+uhd/usrp/multi_usrp.hpp
+-
+uhd/utils/safe_main.hpp
+-
+uhd/utils/thread.hpp
+-
+boost/format.hpp
+-
+boost/program_options.hpp
+-
+chrono
+-
+complex
+-
+csignal
+-
+fstream
+-
+iostream
+-
+thread
+-
+

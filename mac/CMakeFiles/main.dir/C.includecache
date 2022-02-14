@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/usrpuser/test/mac/defs.h
+
+/home/usrpuser/test/mac/main.c
+defs.h
+/home/usrpuser/test/mac/defs.h
+stdio.h
+-
+stdlib.h
+-
+stdint.h
+-
+

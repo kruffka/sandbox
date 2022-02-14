@@ -2,6 +2,7 @@
     "files.associations": {
         "stdio.h": "c",
         "*.ipp": "cpp",
-        "array": "c"
+        "array": "c",
+        "stdlib.h": "c"
     }
 }

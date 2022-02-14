@@ -1,0 +1,3 @@
+/home/usrpuser/test/mac/CMakeFiles/rebuild_cache.dir
+/home/usrpuser/test/mac/CMakeFiles/main.dir
+/home/usrpuser/test/mac/CMakeFiles/edit_cache.dir

@@ -129,13 +129,15 @@ uint8_t nr_dci_decoding_procedure(PHY_VARS_NR_UE *ue,
 
       n_rnti = rel15->rnti;
 
-      printf("(%i.%i) dci indication (rnti %x,dci format %s,n_CCE %d,payloadSize %d)\n",
-            0, 0,n_rnti,nr_dci_format_string[rel15->dci_format_options[k]],CCEind,dci_length);
+      // printf("(%i.%i) dci indication (rnti %x,dci format %s,n_CCE %d,payloadSize %d)\n",
+      //       0, 0,n_rnti,nr_dci_format_string[rel15->dci_format_options[k]],CCEind,dci_length);
+
       if (crc == n_rnti) {
         printf("(%i.%i) Received dci indication (rnti %x,dci format %s,n_CCE %d,payloadSize %d,payload %llx)\n",
               0, 0,n_rnti,nr_dci_format_string[rel15->dci_format_options[k]],CCEind,dci_length,*(unsigned long long*)dci_estimation);
       
       
+        printf("DCI DECODED!!!!\n");
       } else {
         printf("(%i.%i) Decoded crc %x does not match rnti %x for DCI format %d\n", 0, 0, crc, n_rnti, rel15->dci_format_options[k]);
       }
@@ -336,7 +338,9 @@ void rxdataF_comp_read(void *data, char *filename){
 }
 
 int main() {
-crcTableInit();
+
+    crcTableInit();
+
     NR_UE_PDCCH *pdcch_vars = (NR_UE_PDCCH *)malloc(sizeof(NR_UE_PDCCH));
     fapi_nr_dl_config_dci_dl_pdu_rel15_t *rel15 = (fapi_nr_dl_config_dci_dl_pdu_rel15_t *)malloc(sizeof(fapi_nr_dl_config_dci_dl_pdu_rel15_t));
     PHY_VARS_NR_UE *ue = (PHY_VARS_NR_UE *)malloc(sizeof(PHY_VARS_NR_UE));
@@ -369,12 +373,16 @@ crcTableInit();
     // fclose(file);
 
 
-    rxdataF_comp_read(&pdcch_vars->rxdataF_comp[0], "/home/usrpuser/test/nr_dci_decoding/rx/rxdataF_comp_frame543slot6.m");
+    char filename[100];
+
+    int frame = 545;
+    int slot = 2;
+    sprintf(filename, "/home/usrpuser/test/nr_dci_decoding/rx/rxdataF_comp_frame%dslot%d.m", frame, slot);
+
+    rxdataF_comp_read(&pdcch_vars->rxdataF_comp[0], filename);
 
 
     int n_rb = 24;
-
-
     int N_RB_DL = 106;
 
     for(int s = 0; s < 2; s++) { // 2 pdcch symbols
@@ -424,6 +432,15 @@ crcTableInit();
     rel15->coreset.InterleaverSize = 0;
     rel15->coreset.ShiftIndex = 0;
     
+
+    //
+    //  Candidates, L, CCE, options
+    // 
+
+    rel15->num_dci_options = 1;
+    // rel15->dci_format_options[0] = 6; // NR_UL_DCI_0_0
+    rel15->dci_format_options[0] = 0; // NR_DL_DCI_1_0
+
     rel15->number_of_candidates = 1;
     // rel15->L[0] = 8;
     // rel15->CCE[0] = 0;
@@ -433,8 +450,8 @@ crcTableInit();
     // rel15->CCE[2] = 3;
 
     rel15->dci_length_options[0] = 41;
-    rel15->dci_length_options[1] = 41;
-    rel15->dci_length_options[2] = 41;
+    // rel15->dci_length_options[1] = 41;
+    // rel15->dci_length_options[2] = 41;
 
     nr_pdcch_demapping_deinterleaving((uint32_t *) pdcch_vars->llr,
                                     (uint32_t *) pdcch_vars->e_rx,
@@ -458,10 +475,6 @@ crcTableInit();
       printf("i [%d] e_rx_idx %d\n", i, e_rx_idx);
 
   }
-
-  rel15->num_dci_options = 2;
-  rel15->dci_format_options[0] = 6;
-  rel15->dci_format_options[1] = 0;
 
 
 

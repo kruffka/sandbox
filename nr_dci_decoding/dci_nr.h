@@ -155,7 +155,7 @@ static inline __m128i ssp_comge_epi8_SSE2(__m128i a, __m128i b) {
  * \date 2006-2008
  * \copyright Apache License 2.0
  */
-}
+
 #endif // __SSE3__
 
 
@@ -512,3 +512,5 @@ void applyGtoright(const t_nrPolar_params *pp,decoder_node_t *node);
 void generic_polar_decoder(const t_nrPolar_params *pp,decoder_node_t *node);
 unsigned int crcbit (unsigned char * inputptr, int octetlen, unsigned int poly);
 void applyFtoleft(const t_nrPolar_params *pp, decoder_node_t *node);
+int32_t nr_pdcch_llr(int N_RB_DL, int32_t *rxdataF_comp,
+                     int16_t *pdcch_llr, uint8_t symbol,uint32_t coreset_nbr_rb);

@@ -28,6 +28,23 @@ void exit_function(const char *file, const char *function, const int line, const
   exit(1);
 }
 
+void write_arr(void *data, char *filename, int len) { 
+    FILE *file; 
+    file = fopen(filename, "w"); 
+  
+    if(file == NULL) { 
+      exit_fun("file == NULL in dci_nr"); 
+    } 
+ 
+    // fprintf(file, "= ["); 
+    for(int i = 0; i < len; i++){  
+      fprintf(file, "(%d,%d)\n", ((short *)data)[2*i], ((short *)data)[2*i+1]); 
+    } 
+    // fprintf(file, "];"); 
+    fclose(file); 
+ 
+}
+
 char nr_dci_format_string[8][30] = {
   "NR_DL_DCI_FORMAT_1_0",
   "NR_DL_DCI_FORMAT_1_1",
@@ -56,6 +73,7 @@ char nr_dci_format_string[8][30] = {
 
 // #define NR_PDCCH_DCI_DEBUG
 
+#if 1
 uint8_t nr_dci_decoding_procedure(PHY_VARS_NR_UE *ue,
                                   fapi_nr_dci_indication_t *dci_ind,
                                   fapi_nr_dl_config_dci_dl_pdu_rel15_t *rel15,
@@ -83,23 +101,30 @@ uint8_t nr_dci_decoding_procedure(PHY_VARS_NR_UE *ue,
       }
       if (dci_found==1) continue;
       int dci_length = rel15->dci_length_options[k];
-      printf("dci_length %d\n", dci_length);
       uint64_t dci_estimation[2]= {0};
+
       const t_nrPolar_params *currentPtrDCI = nr_polar_params(NR_POLAR_DCI_MESSAGE_TYPE, dci_length, L, 1, &ue->polarList);
       
 
       printf("Trying DCI candidate %d of %d number of candidates, CCE %d (%d), L %d, length %d, format %s\n",
             j, rel15->number_of_candidates, CCEind, CCEind*9*6*2, L, dci_length,nr_dci_format_string[rel15->dci_format_options[k]]);
+
+
+
+
+      // write_arr(&pdcch_vars->e_rx[0], "w/e_rx.m", 96*106); 
+  
       nr_pdcch_unscrambling(&pdcch_vars->e_rx[CCEind*108], rel15->coreset.scrambling_rnti, L*108, rel15->coreset.pdcch_dmrs_scrambling_id, tmp_e);
       
+      // write_arr(&tmp_e[0], "w/tmp_e.m", 1728); 
 
       uint16_t crc = polar_decoder_int16(tmp_e,
                                          dci_estimation,
                                          1,
                                          currentPtrDCI);
 
-      printf("(%i.%i) Received dci indication (rnti %x,dci format %s,n_CCE %d,payloadSize %d,payload %llx)\n",
-              0, 0,n_rnti,nr_dci_format_string[rel15->dci_format_options[k]],CCEind,dci_length,*(unsigned long long*)dci_estimation);
+      printf("(%i.%i) Received dci indication (rnti %x, crc %x, dci format %s,n_CCE %d,payloadSize %d,payload %llx)\n",
+              0, 0,n_rnti,crc,nr_dci_format_string[rel15->dci_format_options[k]],CCEind,dci_length,*(unsigned long long*)dci_estimation);
       
 
       n_rnti = rel15->rnti;
@@ -118,6 +143,41 @@ uint8_t nr_dci_decoding_procedure(PHY_VARS_NR_UE *ue,
   }
 
   return(0);
+}
+
+#endif
+
+
+int32_t nr_pdcch_llr(int N_RB_DL, int32_t *rxdataF_comp,
+                     int16_t *pdcch_llr, uint8_t symbol,uint32_t coreset_nbr_rb) {
+
+  int16_t *rxF = (int16_t *) &rxdataF_comp[(symbol * coreset_nbr_rb * 12)];
+  int32_t i;
+  int16_t *pdcch_llrp;
+  pdcch_llrp = &pdcch_llr[2 * symbol * coreset_nbr_rb * 9];
+
+  if (!pdcch_llrp) {
+    printf("pdcch_qpsk_llr: llr is null, symbol %d\n", symbol);
+    return (-1);
+  }
+
+  // printf("llr logs: pdcch qpsk llr for symbol %d (pos %d), llr offset %ld\n",symbol,(symbol*N_RB_DL*12),pdcch_llrp-pdcch_llr);
+
+  //for (i = 0; i < (frame_parms->N_RB_DL * ((symbol == 0) ? 16 : 24)); i++) {
+  for (i = 0; i < (coreset_nbr_rb * ((symbol == 0) ? 18 : 18)); i++) {
+    if (*rxF > 31)
+      *pdcch_llrp = 31;
+    else if (*rxF < -32)
+      *pdcch_llrp = -32;
+    else
+      *pdcch_llrp = (*rxF);
+
+    // printf("llr logs: rb=%d i=%d *rxF:%d => *pdcch_llrp:%d\n",i/18,i,*rxF,*pdcch_llrp);
+    rxF++;
+    pdcch_llrp++;
+  }
+
+  return (0);
 }
 
 void nr_pdcch_demapping_deinterleaving(uint32_t *llr,
@@ -190,7 +250,7 @@ void nr_pdcch_demapping_deinterleaving(uint32_t *llr,
         r = 0;
         c++;
       }
-      printf("c %d r %d\n", c, r);
+      // printf("c %d r %d\n", c, r);
 
       bundle_j = (c * coreset_interleaver_size_R) + r; // bundle_j = r (0, 1, 2, 3)
       f_bundle_j = ((r * coreset_C) + c + n_shift) % (coreset_nbr_rb / reg_bundle_size_L); // f_bundle_j = c % 6 = 1
@@ -223,8 +283,8 @@ void nr_pdcch_demapping_deinterleaving(uint32_t *llr,
   int rb = 0;
   for (int c_id = 0; c_id < number_of_candidates; c_id++ ) { // [0..2)
     for (int symbol_idx = start_symbol; symbol_idx < start_symbol+coreset_time_dur; symbol_idx++) { // [0..2)
-      // for (int cce_count = CCE[c_id/coreset_time_dur]+c_id%coreset_time_dur; cce_count < CCE[c_id/coreset_time_dur]+c_id%coreset_time_dur+L[c_id]; cce_count += coreset_time_dur) { // cce_count 0 or 1; < 1 or < 5 
-      for (int cce_count = CCE[c_id]; cce_count < CCE[c_id]+L[c_id]; cce_count += coreset_time_dur) { // cce_count 0 or 1; < 1 or < 5 
+      for (int cce_count = CCE[c_id/coreset_time_dur]+c_id%coreset_time_dur; cce_count < CCE[c_id/coreset_time_dur]+c_id%coreset_time_dur+L[c_id]; cce_count += coreset_time_dur) { // cce_count 0 or 1; < 1 or < 5 
+      // for (int cce_count = CCE[c_id]; cce_count < CCE[c_id]+L[c_id]; cce_count += coreset_time_dur) { // cce_count 0 or 1; < 1 or < 5 
         for (int reg_in_cce_idx = 0; reg_in_cce_idx < NR_NB_REG_PER_CCE; reg_in_cce_idx++) { // 0..6
 
           f_reg = (f_bundle_j_list_ord[cce_count] * reg_bundle_size_L) + reg_in_cce_idx;
@@ -247,10 +307,36 @@ void nr_pdcch_demapping_deinterleaving(uint32_t *llr,
   }
 }
 
+void rxdataF_comp_read(void *data, char *filename){ 
+  
+    FILE *file; 
+    file = fopen(filename, "r"); 
+  
+    if(file == NULL) { 
+      exit_fun("file == NULL in dci_nr"); 
+    } 
+    fscanf(file, "rxdataF_comp = ["); 
+    int32_t re, im; 
+    for(int i = 0; i < 2*12*106; i++){  
+      fscanf(file, "%d + j*(%d)\n", &re, &im); 
+ 
+      ((short *)data)[2*i] = (short)(re); 
+      ((short *)data)[2*i+1] = (short)(im); 
+          
+    } 
+    fscanf(file, "];"); 
+    fclose(file); 
+
+    for(int i = 0; i < 10; i++) {
+      printf("%d + j*(%d)\n", 
+        ((short *)data)[2*i], 
+        ((short *)data)[2*i+1] 
+       );
+    }
+}
 
 int main() {
-    
-
+crcTableInit();
     NR_UE_PDCCH *pdcch_vars = (NR_UE_PDCCH *)malloc(sizeof(NR_UE_PDCCH));
     fapi_nr_dl_config_dci_dl_pdu_rel15_t *rel15 = (fapi_nr_dl_config_dci_dl_pdu_rel15_t *)malloc(sizeof(fapi_nr_dl_config_dci_dl_pdu_rel15_t));
     PHY_VARS_NR_UE *ue = (PHY_VARS_NR_UE *)malloc(sizeof(PHY_VARS_NR_UE));
@@ -258,37 +344,80 @@ int main() {
 
     ue->polarList = (t_nrPolar_params *)malloc(sizeof(t_nrPolar_params));
 
-    int n_rb = 24;
-
-    rel15->coreset.RegBundleSize = 2;
-    printf("rel15->coreset.RegBundleSize %d\n", rel15->coreset.RegBundleSize);
-
     pdcch_vars->llr = (int16_t *)malloc(sizeof(int16_t)*48*106);
     pdcch_vars->e_rx = (int16_t *)malloc(sizeof(int16_t)*96*106);
+    pdcch_vars->rxdataF_comp = (int32_t *)malloc(sizeof(int32_t)*168*106);
 
     // memset(&pdcch_vars->llr[0], 0, 48*106*sizeof(int16_t)); 
 
-    rel15->rnti = 0x48; 
-    FILE *file = fopen("/home/usrpuser/test/nr_dci_decoding/pdcch_llr_frame329slot1.m", "r"); 
+    // FILE *file = fopen("/home/usrpuser/test/nr_dci_decoding/pdcch_llr_frame329slot1.m", "r"); 
+    // if(file == NULL) { 
+    //     exit_fun("probably need to mkdir decoding in /tmp"); 
+    // } 
+ 
+    // printf("reading pdcch_llr_frame329slot1\n"); 
+    // fscanf(file, "llr = ["); 
+    // for(int i = 0; i < 48*106; i++) { 
+    //     fscanf(file, "%d, ", &pdcch_vars->llr[i]); 
+    // } 
+    // fscanf(file, "];"); 
+ 
+    // // for(int i = 0; i < 5; i++) { 
+    // //     printf("%d\n", pdcch_vars->llr[i]); 
+    // // } 
+ 
+    // fclose(file);
+
+
+    rxdataF_comp_read(&pdcch_vars->rxdataF_comp[0], "/home/usrpuser/test/nr_dci_decoding/rx/rxdataF_comp_frame543slot6.m");
+
+
+    int n_rb = 24;
+
+
+    int N_RB_DL = 106;
+
+    for(int s = 0; s < 2; s++) { // 2 pdcch symbols
+      nr_pdcch_llr(N_RB_DL,
+                    pdcch_vars->rxdataF_comp,
+                    pdcch_vars->llr,
+                    s,
+                    n_rb);
+    }
+
+    {
+    
+    FILE *file = fopen("/home/usrpuser/test/nr_dci_decoding/pdcch_llr.m", "w"); 
     if(file == NULL) { 
-        exit_fun("probably need to mkdir decoding in /tmp"); 
+        exit_fun("error opening file"); 
     } 
  
-    printf("reading pdcch_llr_frame329slot1\n"); 
-    fscanf(file, "llr = ["); 
+    printf("writing pdcch_llr\n"); 
+    fprintf(file, "llr = ["); 
     for(int i = 0; i < 48*106; i++) { 
-        fscanf(file, "%d, ", &pdcch_vars->llr[i]); 
+        fprintf(file, "%d, ", pdcch_vars->llr[i]); 
     } 
-    fscanf(file, "];"); 
+    fprintf(file, "];"); 
  
-    for(int i = 0; i < 5; i++) { 
-        printf("%d\n", pdcch_vars->llr[i]); 
-    } 
+    // for(int i = 0; i < 5; i++) { 
+    //     printf("%d\n", pdcch_vars->llr[i]); 
+    // } 
  
     fclose(file);
-
+    }
+    
+    
+    rel15->rnti = 0x46; 
+    rel15->coreset.scrambling_rnti = 0;
+    rel15->coreset.pdcch_dmrs_scrambling_id = 0;
+    // rel15->coreset.CceRegMappingType = 1;
+    // rel15->coreset.CoreSetType = 0;
+    // rel15->coreset.precoder_granularity = 0;
+    // rel15->coreset.tci_present_in_dci = 2;
+    // rel15->coreset.tci_state_pdcch = 5;
     // memset(&pdcch_vars->e_rx, 0, 96*106*sizeof(int16_t)); 
     // dur 2, startsymbolindex 0, n_rb 24, regbundlesize 0 interleaversize 0 shiftindex 0 noc 2
+    
     rel15->coreset.duration = 2;
     rel15->coreset.StartSymbolIndex = 0;
     rel15->coreset.RegBundleSize = 0;
@@ -335,18 +464,19 @@ int main() {
   rel15->dci_format_options[1] = 0;
 
 
-    // printf("entering nr_dci_decoding\n");
-    // nr_dci_decoding_procedure(ue, dci_ind, rel15, pdcch_vars);
-    // printf("leaving nr_dci_decoding\n");
 
+    printf("entering nr_dci_decoding\n");
+    nr_dci_decoding_procedure(ue, dci_ind, rel15, pdcch_vars);
+    printf("leaving nr_dci_decoding\n");
+
+
+    free(pdcch_vars->rxdataF_comp);
     free(pdcch_vars->e_rx);
     free(pdcch_vars->llr);
     free(ue->polarList);
     free(pdcch_vars);
     free(dci_ind);
     free(rel15);
-    free(ue);
-
 
     return 0;
 }

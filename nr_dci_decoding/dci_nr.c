@@ -71,7 +71,7 @@ char nr_dci_format_string[8][30] = {
 // 2) подставляю llr с ситуацией 5,6 не декодирует.
 // e_rx неверно вычисляется по llr.
 
-// #define NR_PDCCH_DCI_DEBUG
+#define NR_PDCCH_DCI_DEBUG
 
 #if 1
 uint8_t nr_dci_decoding_procedure(PHY_VARS_NR_UE *ue,
@@ -114,6 +114,12 @@ uint8_t nr_dci_decoding_procedure(PHY_VARS_NR_UE *ue,
 
       // write_arr(&pdcch_vars->e_rx[0], "w/e_rx.m", 96*106); 
   
+      // int e_rx_idx = 0;
+      // for(int i = 0; i < j; i++) {
+      //   e_rx_idx += 54*rel15->L[i];
+      // }
+      // nr_pdcch_unscrambling(&pdcch_vars->e_rx[e_rx_idx], rel15->coreset.scrambling_rnti, L*108, rel15->coreset.pdcch_dmrs_scrambling_id, tmp_e);
+
       nr_pdcch_unscrambling(&pdcch_vars->e_rx[CCEind*108], rel15->coreset.scrambling_rnti, L*108, rel15->coreset.pdcch_dmrs_scrambling_id, tmp_e);
       
       // write_arr(&tmp_e[0], "w/tmp_e.m", 1728); 
@@ -123,11 +129,11 @@ uint8_t nr_dci_decoding_procedure(PHY_VARS_NR_UE *ue,
                                          1,
                                          currentPtrDCI);
 
-      printf("(%i.%i) Received dci indication (rnti %x, crc %x, dci format %s,n_CCE %d,payloadSize %d,payload %llx)\n",
-              0, 0,n_rnti,crc,nr_dci_format_string[rel15->dci_format_options[k]],CCEind,dci_length,*(unsigned long long*)dci_estimation);
-      
 
       n_rnti = rel15->rnti;
+
+      printf("(%i.%i) Received dci indication (rnti %x, crc %x, dci format %s,n_CCE %d,payloadSize %d,payload %llx)\n",
+           0, 0,n_rnti,crc,nr_dci_format_string[rel15->dci_format_options[k]],CCEind,dci_length,*(unsigned long long*)dci_estimation);
 
       // printf("(%i.%i) dci indication (rnti %x,dci format %s,n_CCE %d,payloadSize %d)\n",
       //       0, 0,n_rnti,nr_dci_format_string[rel15->dci_format_options[k]],CCEind,dci_length);
@@ -373,13 +379,34 @@ int main() {
     // fclose(file);
 
 
-    char filename[100];
-
+    // 
+    // Frame, slot from file
+    //
     int frame = 545;
     int slot = 2;
+
+    char filename[100];
     sprintf(filename, "/home/usrpuser/test/nr_dci_decoding/rx/rxdataF_comp_frame%dslot%d.m", frame, slot);
 
     rxdataF_comp_read(&pdcch_vars->rxdataF_comp[0], filename);
+
+
+    //
+    //  Candidates, L, CCE, options
+    // 
+    rel15->num_dci_options = 2;
+    rel15->dci_format_options[0] = 0; // NR_DL_DCI_1_0
+    rel15->dci_format_options[1] = 6; // NR_UL_DCI_0_0
+
+    rel15->number_of_candidates = 1;
+    rel15->L[0] = 1;
+    rel15->CCE[0] = 2;
+    // rel15->L[1] = 1;
+    // rel15->CCE[1] = 3;
+
+    rel15->dci_length_options[0] = 41;
+    rel15->dci_length_options[1] = 41;
+
 
 
     int n_rb = 24;
@@ -395,7 +422,7 @@ int main() {
 
     {
     
-    FILE *file = fopen("/home/usrpuser/test/nr_dci_decoding/pdcch_llr.m", "w"); 
+    FILE *file = fopen("/home/usrpuser/test/nr_dci_decoding/w/pdcch_llr.m", "w"); 
     if(file == NULL) { 
         exit_fun("error opening file"); 
     } 
@@ -433,25 +460,7 @@ int main() {
     rel15->coreset.ShiftIndex = 0;
     
 
-    //
-    //  Candidates, L, CCE, options
-    // 
 
-    rel15->num_dci_options = 1;
-    // rel15->dci_format_options[0] = 6; // NR_UL_DCI_0_0
-    rel15->dci_format_options[0] = 0; // NR_DL_DCI_1_0
-
-    rel15->number_of_candidates = 1;
-    // rel15->L[0] = 8;
-    // rel15->CCE[0] = 0;
-    rel15->L[0] = 4;
-    rel15->CCE[0] = 0;
-    // rel15->L[2] = 1;
-    // rel15->CCE[2] = 3;
-
-    rel15->dci_length_options[0] = 41;
-    // rel15->dci_length_options[1] = 41;
-    // rel15->dci_length_options[2] = 41;
 
     nr_pdcch_demapping_deinterleaving((uint32_t *) pdcch_vars->llr,
                                     (uint32_t *) pdcch_vars->e_rx,

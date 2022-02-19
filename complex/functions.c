@@ -1,6 +1,6 @@
 #include "functions.h"
 
-complex_t init() {
+struct complex init() {
 
     complex_t a;
     a.im = 4;

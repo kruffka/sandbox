@@ -411,6 +411,8 @@ void nr_pdcch_unscrambling(int16_t *z,
                            uint32_t length,
                            uint16_t pdcch_DMRS_scrambling_id,
                            int16_t *z2) {
+
+
   int i;
   uint8_t reset;
   uint32_t x1, x2, s = 0;
@@ -1189,7 +1191,7 @@ void applyFtoleft(const t_nrPolar_params *pp, decoder_node_t *node) {
       __m256i a256,b256,absa256,absb256,minabs256;
       int avx2len = node->Nv/2/16;
 
-      //      printf("avx2len %d\n",avx2len);
+      // printf("avx2len %d avx2mod %d\n",avx2len, avx2mod);
       for (int i=0;i<avx2len;i++) {
         
 	a256       =((__m256i*)alpha_v)[i];

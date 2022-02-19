@@ -110,17 +110,17 @@ uint8_t nr_dci_decoding_procedure(PHY_VARS_NR_UE *ue,
             j, rel15->number_of_candidates, CCEind, CCEind*9*6*2, L, dci_length,nr_dci_format_string[rel15->dci_format_options[k]]);
 
 
-
-
       // write_arr(&pdcch_vars->e_rx[0], "w/e_rx.m", 96*106); 
   
-      // int e_rx_idx = 0;
-      // for(int i = 0; i < j; i++) {
-      //   e_rx_idx += 54*rel15->L[i];
-      // }
-      // nr_pdcch_unscrambling(&pdcch_vars->e_rx[e_rx_idx], rel15->coreset.scrambling_rnti, L*108, rel15->coreset.pdcch_dmrs_scrambling_id, tmp_e);
+      int e_rx_idx = 0;
+      for(int i = 0; i < j; i++) {
+        e_rx_idx += 54*rel15->L[i];
+      }
+      printf("e_rx_idx = %d\n", e_rx_idx);
+      nr_pdcch_unscrambling(&pdcch_vars->e_rx[e_rx_idx], rel15->coreset.scrambling_rnti, L*108, rel15->coreset.pdcch_dmrs_scrambling_id, tmp_e);
 
-      nr_pdcch_unscrambling(&pdcch_vars->e_rx[CCEind*108], rel15->coreset.scrambling_rnti, L*108, rel15->coreset.pdcch_dmrs_scrambling_id, tmp_e);
+      // printf("CCEind = %d\n", CCEind*108);
+      // nr_pdcch_unscrambling(&pdcch_vars->e_rx[0*108], rel15->coreset.scrambling_rnti, L*108, rel15->coreset.pdcch_dmrs_scrambling_id, tmp_e);
       
       // write_arr(&tmp_e[0], "w/tmp_e.m", 1728); 
 
@@ -200,7 +200,7 @@ void nr_pdcch_demapping_deinterleaving(uint32_t *llr,
                                        uint16_t *CCE,
                                        uint8_t *L) {  
 
-   printf("coreset_time_dur %d start_symbol %d coreset_nbr_rb %d reg_bundle_size_L %d coreset_interleaver_size_R %d n_shift %d\n", coreset_time_dur, start_symbol, coreset_nbr_rb, reg_bundle_size_L, coreset_interleaver_size_R, n_shift);
+  printf("coreset_time_dur %d start_symbol %d coreset_nbr_rb %d reg_bundle_size_L %d coreset_interleaver_size_R %d n_shift %d\n", coreset_time_dur, start_symbol, coreset_nbr_rb, reg_bundle_size_L, coreset_interleaver_size_R, n_shift);
   
   /*
    * This function will do demapping and deinterleaving from llr containing demodulated symbols
@@ -244,75 +244,115 @@ void nr_pdcch_demapping_deinterleaving(uint32_t *llr,
   int coreset_interleaved = 0;
 
   if (reg_bundle_size_L != 0) { // interleaving will be done only if reg_bundle_size_L != 0
+    AssertFatal(1==0, "deinterleaving from llr containing demodulated symbols in %s is not really implemented", __FUNCTION__);
     coreset_interleaved = 1;
     coreset_C = (uint32_t) (coreset_nbr_rb / (coreset_interleaver_size_R * reg_bundle_size_L));
   } else {
     reg_bundle_size_L = 6; // true
   }
 
-  int f_bundle_j_list[(2*NR_MAX_PDCCH_AGG_LEVEL) - 1] = {};
+  // int f_bundle_j_list[(2*NR_MAX_PDCCH_AGG_LEVEL) - 1] = {};
 
-  for (int reg = 0; reg < coreset_nbr_rb; reg++) { // 0..24
-    if ((reg % reg_bundle_size_L) == 0) {
-      if (r == coreset_interleaver_size_R) {
-        r = 0;
-        c++;
-      }
-      // printf("c %d r %d\n", c, r);
+  // for (int reg = 0; reg < coreset_nbr_rb; reg++) { // 0..24
+  //   if ((reg % reg_bundle_size_L) == 0) {
+  //     if (r == coreset_interleaver_size_R) {
+  //       r = 0;
+  //       c++;
+  //     }
+  //     // printf("c %d r %d\n", c, r);
 
-      bundle_j = (c * coreset_interleaver_size_R) + r; // bundle_j = r (0, 1, 2, 3)
-      f_bundle_j = ((r * coreset_C) + c + n_shift) % (coreset_nbr_rb / reg_bundle_size_L); // f_bundle_j = c % 6 = 1
+  //     bundle_j = (c * coreset_interleaver_size_R) + r; // bundle_j = r (0, 1, 2, 3)
+  //     f_bundle_j = ((r * coreset_C) + c + n_shift) % (coreset_nbr_rb / reg_bundle_size_L); // f_bundle_j = c % 6 = 1
 
-      if (coreset_interleaved == 0) f_bundle_j = bundle_j; // true (0, 1, 2, 3)
+  //     if (coreset_interleaved == 0) f_bundle_j = bundle_j; // true (0, 1, 2, 3)
 
-      f_bundle_j_list[reg / 6] = f_bundle_j; // [0, 1, 2, 3]
+  //     f_bundle_j_list[reg / 6] = f_bundle_j; // [0, 1, 2, 3]
 
-    }
-    if ((reg % reg_bundle_size_L) == 0) r++; // (0, 1, 2, 3)
-  }
+  //   }
+  //   if ((reg % reg_bundle_size_L) == 0) r++; // (0, 1, 2, 3)
+  // }
 
-  // Get cce_list indices by reg_idx in ascending order
-  int f_bundle_j_list_id = 0;
-  int f_bundle_j_list_ord[(2*NR_MAX_PDCCH_AGG_LEVEL)-1] = {};
-  for (int c_id = 0; c_id < number_of_candidates; c_id++ ) { // 0..2
-    f_bundle_j_list_id = CCE[c_id]; // [3, 0]
-    for (int p = 0; p < NR_MAX_PDCCH_AGG_LEVEL; p++) { // 0..16
-      for (int p2 = CCE[c_id]; p2 < CCE[c_id] + L[c_id]; p2++) { // 3 < 4; 0 .. 4
-        AssertFatal(p2<2*NR_MAX_PDCCH_AGG_LEVEL,"number_of_candidates %d : p2 %d,  CCE[%d] %d, L[%d] %d\n",number_of_candidates,p2,c_id,CCE[c_id],c_id,L[c_id]);
-        if (f_bundle_j_list[p2] == p) { //  3 == 0..16 
-          AssertFatal(f_bundle_j_list_id < 2*NR_MAX_PDCCH_AGG_LEVEL,"f_bundle_j_list_id %d\n",f_bundle_j_list_id);
-          f_bundle_j_list_ord[f_bundle_j_list_id] = p; // [3] = 3; [0] = 0; [1] = 1; [2] = 2; [3] = 3;
-          f_bundle_j_list_id++; // 4
-          break;
-        }
-      }
-    }
-  }
+  // // Get cce_list indices by reg_idx in ascending order
+  // int f_bundle_j_list_id = 0;
+  // int f_bundle_j_list_ord[(2*NR_MAX_PDCCH_AGG_LEVEL)-1] = {};
+  // for (int c_id = 0; c_id < number_of_candidates; c_id++ ) { // 0..2
+  //   f_bundle_j_list_id = CCE[c_id]; // [3, 0]
+  //   for (int p = 0; p < NR_MAX_PDCCH_AGG_LEVEL; p++) { // 0..16
+  //     for (int p2 = CCE[c_id]; p2 < CCE[c_id] + L[c_id]; p2++) { // 3 < 4; 0 .. 4
+  //       AssertFatal(p2<2*NR_MAX_PDCCH_AGG_LEVEL,"number_of_candidates %d : p2 %d,  CCE[%d] %d, L[%d] %d\n",number_of_candidates,p2,c_id,CCE[c_id],c_id,L[c_id]);
+  //       if (f_bundle_j_list[p2] == p) { //  3 == 0..16 
+  //         AssertFatal(f_bundle_j_list_id < 2*NR_MAX_PDCCH_AGG_LEVEL,"f_bundle_j_list_id %d\n",f_bundle_j_list_id);
+  //         f_bundle_j_list_ord[f_bundle_j_list_id] = p; // [3] = 3; [0] = 0; [1] = 1; [2] = 2; [3] = 3;
+  //         f_bundle_j_list_id++; // 4
+  //         break;
+  //       }
+  //     }
+  //   }
+  // }
+
+  
+// if L is even
+//     int rb = 0;
+//   for (int c_id = 0; c_id < number_of_candidates; c_id++ ) { // [0..2)
+//     for (int symbol_idx = start_symbol; symbol_idx < start_symbol+coreset_time_dur; symbol_idx++) { // [0..2)
+//       // for (int cce_count = CCE[c_id/coreset_time_dur]+c_id%coreset_time_dur; cce_count < CCE[c_id/coreset_time_dur]+c_id%coreset_time_dur+L[c_id]; cce_count += coreset_time_dur) { // cce_count 0 or 1; < 1 or < 5 
+//       for (int cce_count = CCE[c_id]; cce_count < CCE[c_id]+L[c_id]; cce_count += coreset_time_dur) { // cce_count 0 or 1; < 1 or < 5 
+//         for (int reg_in_cce_idx = 0; reg_in_cce_idx < NR_NB_REG_PER_CCE; reg_in_cce_idx++) { // 0..6
+
+//           f_reg = (cce_count * reg_bundle_size_L) + reg_in_cce_idx;
+
+//           index_z = 9 * rb;
+//           index_llr = (uint16_t) (f_reg + symbol_idx * coreset_nbr_rb) * 9;
+
+//           for (int i = 0; i < 9; i++) {
+//             z[index_z + i] = llr[index_llr + i];
+// #ifdef NR_PDCCH_DCI_DEBUG
+
+//             printf("[cce_count=%d,reg_in_cce_idx=%d,bundle_j=%d,symbol_idx=%d,candidate=%d] z[%d]=(%d,%d) <-> \t[f_reg=%d,fbundle_j=%d] llr[%d]=(%d,%d) cce_idx %d\n",
+//                   cce_count,reg_in_cce_idx,bundle_j,symbol_idx,c_id,(index_z + i),*(int16_t *) &z[index_z + i],*(1 + (int16_t *) &z[index_z + i]),
+//                    f_reg,f_bundle_j,(index_llr + i),*(int16_t *) &llr[index_llr + i], *(1 + (int16_t *) &llr[index_llr + i]), (index_llr + i)/(9*3));
+// #endif
+//           }
+//           rb++;
+//         }
+//       }
+//     }
+//   }
+
+  
+  int reg_in_cce_symbol = NR_NB_REG_PER_CCE/coreset_time_dur;
+
   int rb = 0;
-  for (int c_id = 0; c_id < number_of_candidates; c_id++ ) { // [0..2)
-    for (int symbol_idx = start_symbol; symbol_idx < start_symbol+coreset_time_dur; symbol_idx++) { // [0..2)
-      for (int cce_count = CCE[c_id/coreset_time_dur]+c_id%coreset_time_dur; cce_count < CCE[c_id/coreset_time_dur]+c_id%coreset_time_dur+L[c_id]; cce_count += coreset_time_dur) { // cce_count 0 or 1; < 1 or < 5 
-      // for (int cce_count = CCE[c_id]; cce_count < CCE[c_id]+L[c_id]; cce_count += coreset_time_dur) { // cce_count 0 or 1; < 1 or < 5 
-        for (int reg_in_cce_idx = 0; reg_in_cce_idx < NR_NB_REG_PER_CCE; reg_in_cce_idx++) { // 0..6
+  for (int c_id = 0; c_id < number_of_candidates; c_id++) {
+    for (int symbol_idx = start_symbol; symbol_idx < start_symbol+coreset_time_dur; symbol_idx++) {
+      for (int cce_count = CCE[c_id]; cce_count < CCE[c_id]+L[c_id]; cce_count++) {
+        for (int reg_in_cce_idx = 0; reg_in_cce_idx < reg_in_cce_symbol; reg_in_cce_idx++) {
 
-          f_reg = (f_bundle_j_list_ord[cce_count] * reg_bundle_size_L) + reg_in_cce_idx;
-
+          f_reg = cce_count*reg_in_cce_symbol + reg_in_cce_idx;
+          
           index_z = 9 * rb;
-          index_llr = (uint16_t) (f_reg + symbol_idx * coreset_nbr_rb) * 9;
+          index_llr = (f_reg + symbol_idx*coreset_nbr_rb) * 9;
 
           for (int i = 0; i < 9; i++) {
             z[index_z + i] = llr[index_llr + i];
-#ifdef NR_PDCCH_DCI_DEBUG
-            printf("[cce_count=%d,reg_in_cce_idx=%d,bundle_j=%d,symbol_idx=%d,candidate=%d] z[%d]=(%d,%d) <-> \t[f_reg=%d,fbundle_j=%d] llr[%d]=(%d,%d) \n",
-                  cce_count,reg_in_cce_idx,bundle_j,symbol_idx,c_id,(index_z + i),*(int16_t *) &z[index_z + i],*(1 + (int16_t *) &z[index_z + i]),
-                   f_reg,f_bundle_j,(index_llr + i),*(int16_t *) &llr[index_llr + i], *(1 + (int16_t *) &llr[index_llr + i]));
-#endif
+          
+            #ifdef NR_PDCCH_DCI_DEBUG
+
+              printf("[cce_count=%d,reg_in_cce_idx=%d,bundle_j=%d,symbol_idx=%d,candidate=%d] z[%d]=(%d,%d) <-> \t[f_reg=%d,fbundle_j=%d] llr[%d]=(%d,%d) cce_idx %d\n",
+                    cce_count,reg_in_cce_idx,bundle_j,symbol_idx,c_id,(index_z + i),*(int16_t *) &z[index_z + i],*(1 + (int16_t *) &z[index_z + i]),
+                    f_reg,f_bundle_j,(index_llr + i),*(int16_t *) &llr[index_llr + i], *(1 + (int16_t *) &llr[index_llr + i]), (index_llr + i)/(9*3));
+
+            #endif
+
           }
+
           rb++;
         }
       }
     }
   }
+
+
 }
 
 void rxdataF_comp_read(void *data, char *filename){ 
@@ -382,8 +422,8 @@ int main() {
     // 
     // Frame, slot from file
     //
-    int frame = 545;
-    int slot = 2;
+    int frame = 545; //545
+    int slot = 5; //5
 
     char filename[100];
     sprintf(filename, "/home/usrpuser/test/nr_dci_decoding/rx/rxdataF_comp_frame%dslot%d.m", frame, slot);
@@ -394,18 +434,18 @@ int main() {
     //
     //  Candidates, L, CCE, options
     // 
-    rel15->num_dci_options = 2;
+    rel15->num_dci_options = 1;
     rel15->dci_format_options[0] = 0; // NR_DL_DCI_1_0
-    rel15->dci_format_options[1] = 6; // NR_UL_DCI_0_0
+    // rel15->dci_format_options[1] = 6; // NR_UL_DCI_0_0
 
-    rel15->number_of_candidates = 1;
+    rel15->number_of_candidates = 2;
     rel15->L[0] = 1;
-    rel15->CCE[0] = 2;
-    // rel15->L[1] = 1;
-    // rel15->CCE[1] = 3;
+    rel15->CCE[0] = 3;
+    rel15->L[1] = 4;
+    rel15->CCE[1] = 0;
 
     rel15->dci_length_options[0] = 41;
-    rel15->dci_length_options[1] = 41;
+    // rel15->dci_length_options[1] = 41;
 
 
 
@@ -425,7 +465,7 @@ int main() {
     FILE *file = fopen("/home/usrpuser/test/nr_dci_decoding/w/pdcch_llr.m", "w"); 
     if(file == NULL) { 
         exit_fun("error opening file"); 
-    } 
+    }
  
     printf("writing pdcch_llr\n"); 
     fprintf(file, "llr = ["); 
@@ -440,7 +480,9 @@ int main() {
  
     fclose(file);
     }
-    
+
+    // write_arr(&pdcch_vars->llr[0], "w/pdcch_llr.m", 48*106); 
+
     
     rel15->rnti = 0x46; 
     rel15->coreset.scrambling_rnti = 0;
@@ -474,6 +516,35 @@ int main() {
                                     rel15->CCE,
                                     rel15->L);
 
+    
+    printf("pdcch_llr[%d] = %d %d\n", 432, pdcch_vars->llr[862], pdcch_vars->llr[863]);
+
+    // for(int i = 0, index_e = 0; i < 864; i++) {
+    //   if(i >= 162 && i < 216) { // 0-54
+    //     pdcch_vars->e_rx[index_e++] = pdcch_vars->llr[i];
+    //     // printf("pdcch_vars->llr[%d] = %d\n", i, pdcch_vars->llr[i]); 
+    //   } else if (i >= 594 && i < 648) { //162-216
+    //     pdcch_vars->e_rx[index_e++] = pdcch_vars->llr[i]; //54
+    //     // printf("pdcch_vars->llr[%d] = %d\n", i, pdcch_vars->llr[i]); 
+    //   } else if (i >= 594 && i < 702) { // 216-270
+    //     pdcch_vars->e_rx[index_e++] = 0;//pdcch_vars->llr[i]; // 108
+    //   //   // printf("pdcch_vars->llr[%d] = %d\n", 648-54*2+i, pdcch_vars->llr[648-54*2+i]); 
+    //   } else if (i >= 756 && i < 864) { //389-432
+    //     pdcch_vars->e_rx[index_e++] = 0;//pdcch_vars->llr[i]; // 162
+    //     // printf("pdcch_vars->llr[%d] = %d\n", 378+i, pdcch_vars->llr[378+i]); 
+    //   }
+    // }
+
+
+    // for(int i = 108; i < 108+54; i++) {
+    //   printf("llr [%d] = %d\n", i, pdcch_vars->llr[i]);
+    // }
+  //   printf("\n");
+  // for(int i = 108; i < 108+20; i++) {
+  //   printf("llr[%d] = %d %p\n", i, pdcch_vars->llr[i], &pdcch_vars->llr[i]);
+  // }
+    write_arr(&pdcch_vars->e_rx[0], "w/e_rx.m", 96*106); 
+
 
     for(int i = 0; i < rel15->number_of_candidates; i++) {
       int e_rx_idx = 0;
@@ -484,7 +555,7 @@ int main() {
       printf("i [%d] e_rx_idx %d\n", i, e_rx_idx);
 
   }
-
+  
 
 
     printf("entering nr_dci_decoding\n");

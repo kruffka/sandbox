@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "*.tcc": "c",
+        "optional": "c",
+        "algorithm": "c",
+        "istream": "c",
+        "streambuf": "c",
+        "type_traits": "c"
+    }
+}

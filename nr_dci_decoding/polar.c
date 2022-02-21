@@ -315,6 +315,7 @@ uint32_t polar_decoder_int16(int16_t *input,
   }
 
   memcpy((void *)&polarParams->tree.root->alpha[0],(void *)&d_tilde[0],sizeof(int16_t)*polarParams->N);
+  printf("polarParams->N %d polarParams->tree.root->alpha[0] %p d_tilde[0] = %d\n", polarParams->N, polarParams->tree.root->alpha[0], d_tilde[0]);
   generic_polar_decoder(polarParams,polarParams->tree.root);
 
   //Extract the information bits (û to ĉ)
@@ -715,7 +716,7 @@ t_nrPolar_params *nr_polar_params (int8_t messageType,
 
 	
   while (polarParams != NULL) {
-    //    LOG_D(PHY,"nr_polar_params : tag %d (from nr_polar_init %d)\n",tag,polarParams->idx);
+       printf("nr_polar_params : tag %d (from nr_polar_init %d)\n",tag,polarParams->idx);
     if (polarParams->idx == tag)
       return polarParams;
 
@@ -734,10 +735,9 @@ static void nr_polar_init(t_nrPolar_params * *polarParams,
 			  int decoder_flag) {
   t_nrPolar_params *currentPtr = *polarParams;
   uint16_t aggregation_prime = (messageType >= 2) ? aggregation_level : nr_polar_aggregation_prime(aggregation_level);
-
   //Parse the list. If the node is already created, return without initialization.
   while (currentPtr != NULL) {
-    //printf("currentPtr->idx %d, (%d,%d)\n",currentPtr->idx,currentPtr->payloadBits,currentPtr->encoderLength);
+    // printf("currentPtr->idx %d, (%d,%d)\n",currentPtr->idx,currentPtr->payloadBits,currentPtr->encoderLength);
     //LOG_D(PHY,"Looking for index %d\n",(messageType * messageLength * aggregation_prime));
     if (currentPtr->idx == (messageType * messageLength * aggregation_prime)) return;
     else currentPtr = currentPtr->nextPtr;
@@ -1183,7 +1183,6 @@ void applyFtoleft(const t_nrPolar_params *pp, decoder_node_t *node) {
 #endif
 
  
-
   if (node->left->all_frozen == 0) {
 #if defined(__AVX2__)
     int avx2mod = (node->Nv/2)&15;
@@ -1193,7 +1192,7 @@ void applyFtoleft(const t_nrPolar_params *pp, decoder_node_t *node) {
 
       // printf("avx2len %d avx2mod %d\n",avx2len, avx2mod);
       for (int i=0;i<avx2len;i++) {
-        
+          
 	a256       =((__m256i*)alpha_v)[i];
 	b256       =((__m256i*)alpha_v)[i+avx2len];
 	absa256    =_mm256_abs_epi16(a256);
@@ -1203,6 +1202,7 @@ void applyFtoleft(const t_nrPolar_params *pp, decoder_node_t *node) {
       }
     }
     else if (avx2mod == 8) {
+
       __m128i a128,b128,absa128,absb128,minabs128;
       a128       =*((__m128i*)alpha_v);
       b128       =((__m128i*)alpha_v)[1];

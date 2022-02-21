@@ -102,7 +102,6 @@ uint8_t nr_dci_decoding_procedure(PHY_VARS_NR_UE *ue,
       if (dci_found==1) continue;
       int dci_length = rel15->dci_length_options[k];
       uint64_t dci_estimation[2]= {0};
-
       const t_nrPolar_params *currentPtrDCI = nr_polar_params(NR_POLAR_DCI_MESSAGE_TYPE, dci_length, L, 1, &ue->polarList);
       
 
@@ -114,13 +113,13 @@ uint8_t nr_dci_decoding_procedure(PHY_VARS_NR_UE *ue,
   
       int e_rx_idx = 0;
       for(int i = 0; i < j; i++) {
-        e_rx_idx += 54*rel15->L[i];
+        e_rx_idx += 108*rel15->L[i];
       }
       printf("e_rx_idx = %d\n", e_rx_idx);
       nr_pdcch_unscrambling(&pdcch_vars->e_rx[e_rx_idx], rel15->coreset.scrambling_rnti, L*108, rel15->coreset.pdcch_dmrs_scrambling_id, tmp_e);
 
       // printf("CCEind = %d\n", CCEind*108);
-      // nr_pdcch_unscrambling(&pdcch_vars->e_rx[0*108], rel15->coreset.scrambling_rnti, L*108, rel15->coreset.pdcch_dmrs_scrambling_id, tmp_e);
+      // nr_pdcch_unscrambling(&pdcch_vars->e_rx[CCEind*108], rel15->coreset.scrambling_rnti, L*108, rel15->coreset.pdcch_dmrs_scrambling_id, tmp_e);
       
       // write_arr(&tmp_e[0], "w/tmp_e.m", 1728); 
 
@@ -141,8 +140,19 @@ uint8_t nr_dci_decoding_procedure(PHY_VARS_NR_UE *ue,
       if (crc == n_rnti) {
         printf("(%i.%i) Received dci indication (rnti %x,dci format %s,n_CCE %d,payloadSize %d,payload %llx)\n",
               0, 0,n_rnti,nr_dci_format_string[rel15->dci_format_options[k]],CCEind,dci_length,*(unsigned long long*)dci_estimation);
-      
-      
+
+        for(int i = 0; i < dci_length; i++) {
+          printf("%2d ", i);
+        }
+        printf("\n");
+        for(int i = 0; i < dci_length; i++) {
+        
+          printf("%2d ", *(unsigned long long*)dci_estimation&((unsigned long long)pow(2,i)) ? 1 : 0);
+          // if(!(i&3)) printf(" ");
+        
+        }
+        printf("\ndci_estimation first bit %d\n", *(unsigned long long*)dci_estimation&(unsigned long long)pow(2,4*(dci_length/4)) ? 1 : 0);
+        printf("bitwise dci est first bit %d\n", *(unsigned long long*)dci_estimation&(unsigned long long)1<<(4*(dci_length/4)) ? 1 : 0);
         printf("DCI DECODED!!!!\n");
       } else {
         printf("(%i.%i) Decoded crc %x does not match rnti %x for DCI format %d\n", 0, 0, crc, n_rnti, rel15->dci_format_options[k]);
@@ -243,63 +253,63 @@ void nr_pdcch_demapping_deinterleaving(uint32_t *llr,
   uint16_t index_z, index_llr;
   int coreset_interleaved = 0;
 
+  printf("reg_bundle_size_L %d\n", reg_bundle_size_L);
   if (reg_bundle_size_L != 0) { // interleaving will be done only if reg_bundle_size_L != 0
-    AssertFatal(1==0, "deinterleaving from llr containing demodulated symbols in %s is not really implemented", __FUNCTION__);
+    // AssertFatal(1==0, "deinterleaving from llr containing demodulated symbols in %s is not really implemented", __FUNCTION__);
     coreset_interleaved = 1;
     coreset_C = (uint32_t) (coreset_nbr_rb / (coreset_interleaver_size_R * reg_bundle_size_L));
   } else {
     reg_bundle_size_L = 6; // true
   }
 
-  // int f_bundle_j_list[(2*NR_MAX_PDCCH_AGG_LEVEL) - 1] = {};
+  int f_bundle_j_list[(2*NR_MAX_PDCCH_AGG_LEVEL) - 1] = {};
 
-  // for (int reg = 0; reg < coreset_nbr_rb; reg++) { // 0..24
-  //   if ((reg % reg_bundle_size_L) == 0) {
-  //     if (r == coreset_interleaver_size_R) {
-  //       r = 0;
-  //       c++;
-  //     }
-  //     // printf("c %d r %d\n", c, r);
+  for (int reg = 0; reg < coreset_nbr_rb; reg++) { // 0..24
+    if ((reg % reg_bundle_size_L) == 0) {
+      if (r == coreset_interleaver_size_R) {
+        r = 0;
+        c++;
+      }
+      // printf("c %d r %d\n", c, r);
 
-  //     bundle_j = (c * coreset_interleaver_size_R) + r; // bundle_j = r (0, 1, 2, 3)
-  //     f_bundle_j = ((r * coreset_C) + c + n_shift) % (coreset_nbr_rb / reg_bundle_size_L); // f_bundle_j = c % 6 = 1
+      bundle_j = (c * coreset_interleaver_size_R) + r; // bundle_j = r (0, 1, 2, 3)
+      f_bundle_j = ((r * coreset_C) + c + n_shift) % (coreset_nbr_rb / reg_bundle_size_L); // f_bundle_j = c % 6 = 1
 
-  //     if (coreset_interleaved == 0) f_bundle_j = bundle_j; // true (0, 1, 2, 3)
+      if (coreset_interleaved == 0) f_bundle_j = bundle_j; // true (0, 1, 2, 3)
 
-  //     f_bundle_j_list[reg / 6] = f_bundle_j; // [0, 1, 2, 3]
+      f_bundle_j_list[reg / 6] = f_bundle_j; // [0, 1, 2, 3]
 
-  //   }
-  //   if ((reg % reg_bundle_size_L) == 0) r++; // (0, 1, 2, 3)
-  // }
+    }
+    if ((reg % reg_bundle_size_L) == 0) r++; // (0, 1, 2, 3)
+  }
 
-  // // Get cce_list indices by reg_idx in ascending order
-  // int f_bundle_j_list_id = 0;
-  // int f_bundle_j_list_ord[(2*NR_MAX_PDCCH_AGG_LEVEL)-1] = {};
-  // for (int c_id = 0; c_id < number_of_candidates; c_id++ ) { // 0..2
-  //   f_bundle_j_list_id = CCE[c_id]; // [3, 0]
-  //   for (int p = 0; p < NR_MAX_PDCCH_AGG_LEVEL; p++) { // 0..16
-  //     for (int p2 = CCE[c_id]; p2 < CCE[c_id] + L[c_id]; p2++) { // 3 < 4; 0 .. 4
-  //       AssertFatal(p2<2*NR_MAX_PDCCH_AGG_LEVEL,"number_of_candidates %d : p2 %d,  CCE[%d] %d, L[%d] %d\n",number_of_candidates,p2,c_id,CCE[c_id],c_id,L[c_id]);
-  //       if (f_bundle_j_list[p2] == p) { //  3 == 0..16 
-  //         AssertFatal(f_bundle_j_list_id < 2*NR_MAX_PDCCH_AGG_LEVEL,"f_bundle_j_list_id %d\n",f_bundle_j_list_id);
-  //         f_bundle_j_list_ord[f_bundle_j_list_id] = p; // [3] = 3; [0] = 0; [1] = 1; [2] = 2; [3] = 3;
-  //         f_bundle_j_list_id++; // 4
-  //         break;
-  //       }
-  //     }
-  //   }
-  // }
+//   // Get cce_list indices by reg_idx in ascending order
+//   int f_bundle_j_list_id = 0;
+//   int f_bundle_j_list_ord[(2*NR_MAX_PDCCH_AGG_LEVEL)-1] = {};
+//   for (int c_id = 0; c_id < number_of_candidates; c_id++ ) { // 0..2
+//     f_bundle_j_list_id = CCE[c_id]; // [3, 0]
+//     for (int p = 0; p < NR_MAX_PDCCH_AGG_LEVEL; p++) { // 0..16
+//       for (int p2 = CCE[c_id]; p2 < CCE[c_id] + L[c_id]; p2++) { // 3 < 4; 0 .. 4
+//         AssertFatal(p2<2*NR_MAX_PDCCH_AGG_LEVEL,"number_of_candidates %d : p2 %d,  CCE[%d] %d, L[%d] %d\n",number_of_candidates,p2,c_id,CCE[c_id],c_id,L[c_id]);
+//         if (f_bundle_j_list[p2] == p) { //  3 == 0..16 
+//           AssertFatal(f_bundle_j_list_id < 2*NR_MAX_PDCCH_AGG_LEVEL,"f_bundle_j_list_id %d\n",f_bundle_j_list_id);
+//           f_bundle_j_list_ord[f_bundle_j_list_id] = p; // [3] = 3; [0] = 0; [1] = 1; [2] = 2; [3] = 3;
+//           f_bundle_j_list_id++; // 4
+//           break;
+//         }
+//       }
+//     }
+//   }
 
   
-// if L is even
 //     int rb = 0;
 //   for (int c_id = 0; c_id < number_of_candidates; c_id++ ) { // [0..2)
 //     for (int symbol_idx = start_symbol; symbol_idx < start_symbol+coreset_time_dur; symbol_idx++) { // [0..2)
-//       // for (int cce_count = CCE[c_id/coreset_time_dur]+c_id%coreset_time_dur; cce_count < CCE[c_id/coreset_time_dur]+c_id%coreset_time_dur+L[c_id]; cce_count += coreset_time_dur) { // cce_count 0 or 1; < 1 or < 5 
-//       for (int cce_count = CCE[c_id]; cce_count < CCE[c_id]+L[c_id]; cce_count += coreset_time_dur) { // cce_count 0 or 1; < 1 or < 5 
+//       for (int cce_count = CCE[c_id/coreset_time_dur]+c_id%coreset_time_dur; cce_count < CCE[c_id/coreset_time_dur]+c_id%coreset_time_dur+L[c_id]; cce_count += coreset_time_dur) { // cce_count 0 or 1; < 1 or < 5 
+//       // for (int cce_count = CCE[c_id]; cce_count < CCE[c_id]+L[c_id]; cce_count += coreset_time_dur) { // cce_count 0 or 1; < 1 or < 5 
 //         for (int reg_in_cce_idx = 0; reg_in_cce_idx < NR_NB_REG_PER_CCE; reg_in_cce_idx++) { // 0..6
 
-//           f_reg = (cce_count * reg_bundle_size_L) + reg_in_cce_idx;
+//           f_reg = (f_bundle_j_list_ord[cce_count] * reg_bundle_size_L) + reg_in_cce_idx;
 
 //           index_z = 9 * rb;
 //           index_llr = (uint16_t) (f_reg + symbol_idx * coreset_nbr_rb) * 9;
@@ -359,6 +369,7 @@ void rxdataF_comp_read(void *data, char *filename){
   
     FILE *file; 
     file = fopen(filename, "r"); 
+    printf("filename = %s\n", filename);
   
     if(file == NULL) { 
       exit_fun("file == NULL in dci_nr"); 
@@ -392,7 +403,7 @@ int main() {
     PHY_VARS_NR_UE *ue = (PHY_VARS_NR_UE *)malloc(sizeof(PHY_VARS_NR_UE));
     fapi_nr_dci_indication_t *dci_ind = (fapi_nr_dci_indication_t *)malloc(sizeof(fapi_nr_dci_indication_t));
 
-    ue->polarList = (t_nrPolar_params *)malloc(sizeof(t_nrPolar_params));
+    // ue->polarList = (t_nrPolar_params *)malloc(sizeof(t_nrPolar_params));
 
     pdcch_vars->llr = (int16_t *)malloc(sizeof(int16_t)*48*106);
     pdcch_vars->e_rx = (int16_t *)malloc(sizeof(int16_t)*96*106);
@@ -423,29 +434,33 @@ int main() {
     // Frame, slot from file
     //
     int frame = 545; //545
-    int slot = 5; //5
+    int slot = 2; //5
 
     char filename[100];
     sprintf(filename, "/home/usrpuser/test/nr_dci_decoding/rx/rxdataF_comp_frame%dslot%d.m", frame, slot);
+    // sprintf(filename, "/home/usrpuser/test/nr_dci_decoding/rx_3/rxdataF_comp.m", frame, slot);
+
 
     rxdataF_comp_read(&pdcch_vars->rxdataF_comp[0], filename);
 
 
     //
-    //  Candidates, L, CCE, options
+    //  Candidates, L, CCE, options5966
     // 
-    rel15->num_dci_options = 1;
+    rel15->num_dci_options = 2;
     rel15->dci_format_options[0] = 0; // NR_DL_DCI_1_0
-    // rel15->dci_format_options[1] = 6; // NR_UL_DCI_0_0
+    rel15->dci_format_options[1] = 6; // NR_UL_DCI_0_0
 
-    rel15->number_of_candidates = 2;
+    rel15->number_of_candidates = 1;
     rel15->L[0] = 1;
-    rel15->CCE[0] = 3;
-    rel15->L[1] = 4;
-    rel15->CCE[1] = 0;
+    rel15->CCE[0] = 2;
+    // rel15->L[1] = 4;
+    // rel15->CCE[1] = 4;
+    // rel15->L[2] = 4;
+    // rel15->CCE[2] = 0;
 
     rel15->dci_length_options[0] = 41;
-    // rel15->dci_length_options[1] = 41;
+    rel15->dci_length_options[1] = 41;
 
 
 
@@ -517,7 +532,7 @@ int main() {
                                     rel15->L);
 
     
-    printf("pdcch_llr[%d] = %d %d\n", 432, pdcch_vars->llr[862], pdcch_vars->llr[863]);
+    // printf("pdcch_llr[%d] = %d %d\n", 432, pdcch_vars->llr[862], pdcch_vars->llr[863]);
 
     // for(int i = 0, index_e = 0; i < 864; i++) {
     //   if(i >= 162 && i < 216) { // 0-54
@@ -549,14 +564,13 @@ int main() {
     for(int i = 0; i < rel15->number_of_candidates; i++) {
       int e_rx_idx = 0;
       for(int j = 0; j < i; j++) {
-        e_rx_idx += 54*rel15->L[j];
+        e_rx_idx += 108*rel15->L[j]; //54*2
       }
 
       printf("i [%d] e_rx_idx %d\n", i, e_rx_idx);
 
   }
   
-
 
     printf("entering nr_dci_decoding\n");
     nr_dci_decoding_procedure(ue, dci_ind, rel15, pdcch_vars);
@@ -566,7 +580,7 @@ int main() {
     free(pdcch_vars->rxdataF_comp);
     free(pdcch_vars->e_rx);
     free(pdcch_vars->llr);
-    free(ue->polarList);
+    // free(ue->polarList);
     free(pdcch_vars);
     free(dci_ind);
     free(rel15);

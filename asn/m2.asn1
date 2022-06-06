@@ -1,0 +1,37 @@
+Module1 DEFINITIONS ::= BEGIN
+
+    maxNrofPhysicalResourceBlocks INTEGER ::= 275 -- Maximum number of PRBs 
+    maxSCSs INTEGER ::= 5
+
+    FrequencyInfoDL-SIB ::=             SEQUENCE {
+
+        --frequencyBandList                   MultiFrequencyBandListNR-SIB,
+
+        offsetToPointA                      INTEGER (0..2199),
+
+        scs-SpecificCarrierList             SEQUENCE (SIZE (1..maxSCSs)) OF SCS-SpecificCarrier
+
+    }
+
+    -- ASN1START
+    -- TAG-SCS-SPECIFIC-CARRIER-START
+    
+    SCS-SpecificCarrier ::= SEQUENCE {
+        offsetToCarrier INTEGER (0..2199),
+        subcarrierSpacing SubcarrierSpacing,
+        carrierBandwidth INTEGER (1..maxNrofPhysicalResourceBlocks),
+        ...
+    }
+
+-- TAG-SCS-SPECIFIC-CARRIER-STOP
+-- ASN1STOP 
+
+
+-- ASN1START
+-- TAG-SUBCARRIER-SPACING-START
+    SubcarrierSpacing ::= ENUMERATED {kHz15, kHz30, kHz60, kHz120, kHz240, spare3, spare2, spare1}
+-- TAG-SUBCARRIER-SPACING-STOP
+-- ASN1STOP 
+
+END
+

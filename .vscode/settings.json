@@ -3,6 +3,9 @@
         "stdio.h": "c",
         "*.ipp": "cpp",
         "array": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "m1.h": "c",
+        "bcch-bch-messagetype.h": "c",
+        "bcch-bch-message.h": "c"
     }
 }

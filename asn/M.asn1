@@ -1,0 +1,40 @@
+Module DEFINITIONS ::= BEGIN
+
+
+  MIB ::= SEQUENCE {
+
+    systemFrameNumber                   BIT STRING (SIZE (6)),
+
+    subCarrierSpacingCommon             ENUMERATED {scs15or60, scs30or120},
+
+    ssb-SubcarrierOffset                INTEGER (0..15),
+
+    dmrs-TypeA-Position                 ENUMERATED {pos2, pos3},
+
+    pdcch-ConfigSIB1                   INTEGER (0..255),
+
+    cellBarred                          ENUMERATED {barred, notBarred},
+
+    intraFreqReselection                ENUMERATED {allowed, notAllowed}
+
+    --spare                               BIT STRING (SIZE (1))
+
+  } 
+
+  BCCH-BCH-MessageType ::=        CHOICE {
+
+    mib                                      MIB
+
+   -- messageClassExtension           SEQUENCE {}
+
+}
+
+BCCH-BCH-Message ::=            SEQUENCE {
+
+    message                               BCCH-BCH-MessageType
+
+}
+
+
+
+END

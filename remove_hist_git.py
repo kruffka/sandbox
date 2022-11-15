@@ -33,9 +33,11 @@ import subprocess
 
 
 
-commit = '9aada422403cb2ffac32b26ec7e5ea68ce297799'
+commit = '2b2617bc15a8f0ea9302feebb31b865d3d5737c9'
 command = 'echo "' + commit + '" > .git/info/grafts'
 subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 # git filter-branch -- --all
+# rm .git/info/grafts
+# git push -f
 print("done!")
